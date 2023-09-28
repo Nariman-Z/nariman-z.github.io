@@ -358,14 +358,12 @@ img {
   background-color: var(--first-color);
   color: #fff;
   padding: 1rem;
-  border: none;
   border-radius: .5rem;
   font-weight: var(--font-medium);
 }
 
 .button:hover{
   background-color: var(--first-color-alt);
-  cursor: pointer;
 }
 
 .button__icon{
