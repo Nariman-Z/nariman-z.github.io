@@ -37,30 +37,41 @@ self.addEventListener("install", event => {
             return cache.addAll(OFFLINE_URLS);
         })
     );
+    self.skipWaiting(); // Activate immediately after installation
 });
 
 // Fetch event – Handle requests
 self.addEventListener("fetch", event => {
+    const url = new URL(event.request.url);
+
+    // Ignore external resources (like Google Fonts, Iconscout)
+    if (url.origin !== self.location.origin) {
+        return; // Let the browser handle it normally
+    }
+
     event.respondWith(
         caches.match(event.request).then(cachedResponse => {
             if (cachedResponse) {
                 console.log(`Serving cached resource: ${event.request.url}`);
                 return cachedResponse;
             }
+
             return fetch(event.request)
                 .then(networkResponse => {
-                    if (!networkResponse || networkResponse.status !== 200) {
-                        console.warn(`Network request failed: ${event.request.url}`);
-                        return caches.match("/offline.html");
+                    // Only cache successful, same-origin responses
+                    if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+                        console.warn(`Network request failed or non-basic response: ${event.request.url}`);
+                        return networkResponse;
                     }
+
                     return caches.open(CACHE_NAME).then(cache => {
                         cache.put(event.request, networkResponse.clone());
                         console.log(`Caching new resource: ${event.request.url}`);
                         return networkResponse;
                     });
                 })
-                .catch(() => {
-                    console.warn(`Offline: Fallback to offline.html for ${event.request.url}`);
+                .catch(error => {
+                    console.warn(`Fetch failed; serving offline page instead. (${event.request.url})`);
                     return caches.match("/offline.html");
                 });
         })
@@ -83,5 +94,5 @@ self.addEventListener("activate", event => {
             );
         })
     );
-    self.clients.claim();
+    self.clients.claim(); // Take control immediately
 });
